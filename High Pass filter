@@ -1,0 +1,35 @@
+function y = high_pass(Fs)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% y = high_pass(Fs)
+%
+%   Helper function to design a high pass filter
+
+% Filter order (number of coefficients to generate)
+N_filt = 256;
+
+% Nyquist frequency
+Nyq = Fs / 10;
+
+% Filter frequency breakpoints (2-2.1Hz imperfect, but necessary to 
+% find a solution).
+f_filt = [ 0 (10./Nyq) (10.1./Nyq)  1];
+
+% Filter magnitude breakpoints
+m_filt = [ 0 0 1 1];
+
+b_k = fir2(N_filt, f_filt, m_filt);
+
+% Plot the filter kernel (b_k co-efficients)
+figure
+nf = 1:N_filt;
+plot(b_k)
+ylabel('b_k')
+xlabel('Filter taps (k)')
+title('High Pass Filter Design')
+
+% Plot the frequency response of the filter
+figure
+freqz(b_k)
+
+y = b_k;
+
