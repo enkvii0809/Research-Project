@@ -1,0 +1,215 @@
+clear
+clear all
+
+[EMGmvc] = csvimport('datafile.csv', 'columns', {'EMG'});
+EMGmvc(1)=[];
+
+m = max(EMGmvc);
+
+[EMGunw] = csvimport('datafile.csv', 'columns', {'EMG'});
+EMGunw(1)=[];
+
+[EMGw] = csvimport('datafile.csv', 'columns', {'EMG'});
+EMGw(1)=[];
+
+EMGunw = (EMGunw/m)*10000;
+EMGw = (EMGw/m)*10000;
+
+Fs = 5; %Sampling Frequency
+ Lunw=length(EMGunw);
+ Lw= length(EMGw);
+
+tunw = (1:Lunw)/5; 
+ EMGunw = (EMGunw./m)*10000;
+ EMGw = (EMGw./m)*10000;
+ freqw = 0:Fs/Lw:Fs; 
+ frequnw = 0:Fs/Lunw:Fs; 
+ frequnw(189:193)=[];
+freqw(672:676)=[];
+
+% EMG Data                                            % Sampling Interval
+Fs    = 1200;                                                   % Sampling Frequency 
+Fn    = Fs/2;                                                   % Nyquist Frequency
+Freq1 =   2;                                                    % Passband Frequency, Hz (Lower)
+Freq2 = 20;                                                    % Passband Frequency, Hz (Upper)
+Wp    = [Freq1 Freq2]/Fn;                                       % Passband Frequencies (Normalised)
+Ws    = [1  110]/Fn;                                               % Stopband Frequencies (Normalised)
+Rp    =  1;                                                     % Passband Ripple
+Rs    = 50;                                                     % Stopband Ripple
+[n,Wn] = buttord(Wp,Ws,Rp,Rs);                                  % Calculate Filter Order
+[z,p,k] = butter(n,Wn);                                         % Calculate Filter
+[sos,g] = zp2sos(z,p,k);                                        % Convert To Second-Order-Section For Stability
+figure(1)
+freqz(sos, 2^14, Fs)                                            % Filter Bode Plot
+EMGunw_Filtered = filtfilt(sos, g, EMGunw);                           % Filter EMG
+figure(2)
+plot(tunw, EMGunw_Filtered);
+title('Filtered');
+grid
+
+figure
+z=size(EMGunw);
+fln=z(1,1)-4;
+rm=zeros(fln,1);
+
+
+for i=1:fln
+    n=i:i+4;
+    
+s=EMGunw_Filtered(n).^2;
+s2=sum(s);
+r=s2./5;
+rm(i)=sqrt(r);
+%rm=rms(y,[100 1]);
+end
+grayColor = [.7 .7 .7];
+tr=1:fln;
+EMGunw_Filtered(189:192)=[];
+plot(frequnw,EMGunw_Filtered,'Color', grayColor);
+hold on;
+plot(frequnw,rm,'r')
+legend('Raw Signal','RMS');
+grid on;
+title('Novel Device RMS - Unweighted P1');
+xlabel('Frequency (Hz)');
+ylabel('RMS(f)');
+
+figure(1)
+% Plot Raw EMG
+plot(EMGunw, 'b');
+title('raw emg');
+ 
+
+%%Weighted
+Lw=length(EMGw);
+
+tw = (1:Lw)/5;                                                  % EMG Data                                            % Sampling Interval
+Fs    = 1200;                                                   % Sampling Frequency 
+Fn    = Fs/2;                                                   % Nyquist Frequency
+Freq1 =   2;                                                    % Passband Frequency, Hz (Lower)
+Freq2 = 20;                                                    % Passband Frequency, Hz (Upper)
+Wp    = [Freq1 Freq2]/Fn;                                       % Passband Frequencies (Normalised)
+Ws    = [1  110]/Fn;                                               % Stopband Frequencies (Normalised)
+Rp    =  1;                                                     % Passband Ripple
+Rs    = 50;                                                     % Stopband Ripple
+[n,Wn] = buttord(Wp,Ws,Rp,Rs);                                  % Calculate Filter Order
+[z,p,k] = butter(n,Wn);                                         % Calculate Filter
+[sos,g] = zp2sos(z,p,k);                                        % Convert To Second-Order-Section For Stability
+figure(1)
+freqz(sos, 2^14, Fs)                                            % Filter Bode Plot
+EMGw_Filtered = filtfilt(sos, g, EMGw);                           % Filter EMG
+figure(2)
+plot(tw, EMGw_Filtered);
+title('Filtered');
+grid
+
+figure
+z=size(EMGw);
+fln=z(1,1)-4;
+rm=zeros(fln,1);
+
+
+for i=1:fln
+    n=i:i+4;
+    
+s=EMGw(n).^2;
+s2=sum(s);
+r=s2./5;
+rm(i)=sqrt(r);
+%rm=rms(y,[100 1]);
+end
+tr=1:fln;
+grayColor = [.7 .7 .7];
+EMGw(672:675)=[];
+plot(freqw,EMGw,'Color', grayColor);
+hold on;
+plot(freqw,rm,'r');
+grid on;
+title('Novel Device RMS - Weighted P1');
+legend('Raw Signal','RMS');
+xlabel('Frequency (Hz)');
+ylabel('RMS(f)');
+
+
+figure(1)
+% Plot Raw EMG
+plot(EMGw, 'b');
+title('raw emg');
+
+wmean = abs(mean(EMGw_Filtered));
+unwmean =abs(mean((EMGunw_Filtered)));
+disp(wmean);
+disp(unwmean);
+
+
+%Lowpass filter frequency = 50 Hz. Sampling rate = 10000 Hz.
+ 
+%When specifying frequencies for digital filters in Matlab, the frequencies should be normalized by the Nyquist frequency.
+x=EMGunw_Filtered;
+X= EMGunw;
+Fs=1200;
+Fnyq=Fs/2;
+%(Line above is Nyquist frequency. Next line rectifies signal after removing mean value.)
+y=abs(x-mean(x));
+Y=abs(X-mean(X));
+%(Next line defines desired final cutoff frequency, in Hz.)
+ fco=20; 
+%Next line creates 2 order Butterworth low pass filter. The cutoff frequency is adjusted upward by 25% because the filter will be applied twice (forward and backward). The adjustment assures that the actual -3dB frequency after two passes will be the desired fco specified above. This 25% adjustment factor is correct for a 2nd order Butterworth; for a 4th order Butterworth used twice, multiply by 1.116.
+[b,a]=butter(2,fco*1.25/Fnyq);
+%Next line filters the rectified data forward and backward.
+ z=filtfilt(b,a,Y);
+%Next lines create a vector of time values for plotting, plot the data versus time: raw data in blue, offset vertically for visibility, rectified data in green, and linear envelope in red. Axis labels and a legend are also added.
+ figure
+plot(tunw,X-mean(X)-4,'b',tunw,Y,'g',tunw,z,'r');
+xlabel('Time (s)'); ylabel('EMG (mV)'); title('Unweighted Curl - Novel Device P1');
+xlim([0 30]);ylim([-1000 1000]);
+legend('Raw (offset)','Rectified','Linear envelope');
+%Matlab code to compute and plot spectra
+%Next lines creates vector of frequencies present in the spectra, up to the Nyquist frequency.
+N=length(x);
+freqs=0:Fs/N:Fnyq;
+%Next: compute fft and plot the amplitude spectrum, up to the Nyquist frequency. >> 
+xfft = fft(x-mean(x));
+figure;
+plot(freqs,abs(xfft(1:N/2+1))); title('Unweighted Curl - Novel Device P1');
+hold on;
+xlim([0 50]);
+%Next: compute and plot the power spectrum, up to the Nyquist frequency.
+ Pxx = xfft.*conj(xfft);
+ figure;
+plot(freqs,abs(Pxx(1:N/2+1))); title('Unweighted Curl - Novel Device P1');
+xlim([0 50]);
+
+x=EMGw_Filtered;
+X= EMGw;
+Fs=1200;
+Fnyq=Fs/2;
+%(Line above is Nyquist frequency. Next line rectifies signal after removing mean value.)
+y=abs(x-mean(x));
+%(Next line defines desired final cutoff frequency, in Hz.)
+ fco=20; 
+%Next line creates 2 order Butterworth low pass filter. The cutoff frequency is adjusted upward by 25% because the filter will be applied twice (forward and backward). The adjustment assures that the actual -3dB frequency after two passes will be the desired fco specified above. This 25% adjustment factor is correct for a 2nd order Butterworth; for a 4th order Butterworth used twice, multiply by 1.116.
+[b,a]=butter(2,fco*1.25/Fnyq);
+%Next line filters the rectified data forward and backward.
+ z=filtfilt(b,a,y);
+%Next lines create a vector of time values for plotting, plot the data versus time: raw data in blue, offset vertically for visibility, rectified data in green, and linear envelope in red. Axis labels and a legend are also added.
+ figure
+plot(tw,X-mean(X)-4,'b',tw,y,'g',tw,z,'r');
+xlabel('Time (s)'); ylabel('EMG (mV)'); title('Weighted Curl - Novel Device P1');
+xlim([0 30]);ylim([-1000 1000]);
+legend('Raw (offset)','Rectified','Linear envelope');
+%Matlab code to compute and plot spectra
+%Next lines creates vector of frequencies present in the spectra, up to the Nyquist frequency.
+N=length(x);
+freqs=0:Fs/N:Fnyq;
+%Next: compute fft and plot the amplitude spectrum, up to the Nyquist frequency. >> 
+xfft = fft(x-mean(x));
+figure;
+plot(freqs,abs(xfft(1:N/2+1))); title('Weighted Curl - Novel Device P1');
+hold on;
+xlim([0 50]);
+%Next: compute and plot the power spectrum, up to the Nyquist frequency.
+ Pxx = xfft.*conj(xfft);
+ figure;
+plot(freqs,abs(Pxx(1:N/2+1))); title('Weighted Curl - Novel Device P1');
+xlim([0 50]);
