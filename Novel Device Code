@@ -27,6 +27,11 @@ tunw = (1:Lunw)/5;
  frequnw(189:193)=[];
 freqw(672:676)=[];
 
+yhp = high_pass(Fs);
+EMGunw_Filtered = filter(yhp,1,EMGunw);
+EMGw_Filtered= filter(yhp,1,EMGw);
+
+
 % EMG Data                                            % Sampling Interval
 Fs    = 1200;                                                   % Sampling Frequency 
 Fn    = Fs/2;                                                   % Nyquist Frequency
